@@ -1,5 +1,6 @@
 "use client";
 import { Shield, MessageSquareText, ScanSearch, Activity, Database, CircleHelp } from "lucide-react";
+import { API_BASE, apiUrl } from "@/lib/api";
 
 export type View = "overview" | "chat" | "screening";
 export function Sidebar({ active, onChange, backendOnline }: {
@@ -15,8 +16,8 @@ export function Sidebar({ active, onChange, backendOnline }: {
     <div className="nav-label">WORKSPACE</div>
     <nav>{items.map(item => { const Icon = item.icon; return <button key={item.id} onClick={() => onChange(item.id)} className={`nav-item ${active === item.id ? "active" : ""}`}><Icon size={18}/><span>{item.label}</span></button>; })}</nav>
     <div className="sidebar-bottom">
-      <div className="connection"><span className={`dot ${backendOnline ? "online" : backendOnline === false ? "offline" : ""}`}/><div><b>{backendOnline ? "Backend connected" : backendOnline === false ? "Backend unavailable" : "Checking backend"}</b><small>127.0.0.1:8000</small></div></div>
-      <div className="help-note"><CircleHelp size={16}/><span>API documentation<br/><a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">Open Swagger UI ↗</a></span></div>
+      <div className="connection"><span className={`dot ${backendOnline ? "online" : backendOnline === false ? "offline" : ""}`}/><div><b>{backendOnline ? "Backend connected" : backendOnline === false ? "Backend unavailable" : "Checking backend"}</b><small>{API_BASE.replace(/^https?:\/\//, "")}</small></div></div>
+      <div className="help-note"><CircleHelp size={16}/><span>API documentation<br/><a href={apiUrl("/docs")} target="_blank" rel="noreferrer">Open Swagger UI ↗</a></span></div>
     </div>
   </aside>;
 }
