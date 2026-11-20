@@ -40,11 +40,14 @@ export function ChatPanel() {
     setPrompt("");
     setBusy(true);
 
-    const user: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: question,
-    };
+const user: ChatMessage = {
+    id: globalThis.crypto?.randomUUID
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    role: "user",
+    content: question,
+};
+
 
     const answerId = crypto.randomUUID();
 

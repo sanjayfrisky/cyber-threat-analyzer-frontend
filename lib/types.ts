@@ -19,3 +19,15 @@ export type ScreeningResult = {
   sources?: { citation: string; source: string; id: string; title: string; url?: string | null }[];
   filename?: string;
 };
+
+export type AuthUser = {
+  id: number;
+  email: string;
+  full_name: string;
+};
+
+export type AuthResponse = {
+  user: AuthUser;
+  token: string;
+  message: string;
+};

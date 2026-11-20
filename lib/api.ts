@@ -1,13 +1,39 @@
 
-import type { ScreeningResult } from "@/lib/types";
+import type { ScreeningResult, AuthUser, AuthResponse } from "@/lib/types";
 
 export const API_BASE = (
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://cyber-threat-analyzer-m9rj.onrender.com"
+  "http://localhost:8000"
 ).replace(/\/$/, "");
 
 export function apiUrl(path: string) {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+const TOKEN_KEY = "cyber_intel_auth_token";
+
+export function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function removeStoredToken(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+export function getAuthHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = { ...extraHeaders };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 export async function checkBackend(): Promise<boolean> {
@@ -21,6 +47,84 @@ export async function checkBackend(): Promise<boolean> {
   }
 }
 
+export async function loginApi(
+  email: string,
+  password: string,
+  rememberMe: boolean = false
+): Promise<AuthResponse> {
+  const response = await fetch(apiUrl("/api/auth/login"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, password, remember_me: rememberMe }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || `Login failed (${response.status})`);
+  }
+
+  if (data.token) {
+    setStoredToken(data.token);
+  }
+  return data as AuthResponse;
+}
+
+export async function registerApi(
+  email: string,
+  password: string,
+  fullName: string
+): Promise<AuthResponse> {
+  const response = await fetch(apiUrl("/api/auth/register"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, password, full_name: fullName }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || `Registration failed (${response.status})`);
+  }
+
+  if (data.token) {
+    setStoredToken(data.token);
+  }
+  return data as AuthResponse;
+}
+
+export async function getMeApi(): Promise<AuthUser> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(apiUrl("/api/auth/me"), {
+    method: "GET",
+    headers,
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || "Unauthorized");
+  }
+  return data as AuthUser;
+}
+
+export async function logoutApi(): Promise<void> {
+  try {
+    await fetch(apiUrl("/api/auth/logout"), {
+      method: "POST",
+      credentials: "include",
+    });
+  } finally {
+    removeStoredToken();
+  }
+}
+
 export async function sendChat(
   prompt: string,
   sessionId: string,
@@ -29,10 +133,11 @@ export async function sendChat(
 ): Promise<string> {
   const response = await fetch(apiUrl("/api/chat"), {
     method: "POST",
-    headers: {
+    headers: getAuthHeaders({
       "Content-Type": "application/json",
       Accept: "text/event-stream",
-    },
+    }),
+    credentials: "include",
     body: JSON.stringify({
       prompt,
       session_id: sessionId,
@@ -171,6 +276,8 @@ export async function screenEvidence(input: {
 
   const response = await fetch(apiUrl("/api/screening"), {
     method: "POST",
+    headers: getAuthHeaders(),
+    credentials: "include",
     body: form,
   });
 
