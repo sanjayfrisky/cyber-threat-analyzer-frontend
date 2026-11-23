@@ -24,6 +24,8 @@ export type AuthUser = {
   id: number;
   email: string;
   full_name: string;
+  auth_provider?: string;
+  avatar_url?: string;
 };
 
 export type AuthResponse = {

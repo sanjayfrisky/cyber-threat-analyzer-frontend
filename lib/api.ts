@@ -70,6 +70,28 @@ export async function loginApi(
   return data as AuthResponse;
 }
 
+export async function loginWithGoogleApi(
+  idToken: string,
+  rememberMe: boolean = true
+): Promise<AuthResponse> {
+  const response = await fetch(apiUrl("/api/auth/google"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ id_token: idToken, remember_me: rememberMe }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || `Google authentication failed (${response.status})`);
+  }
+
+  if (data.token) {
+    setStoredToken(data.token);
+  }
+  return data as AuthResponse;
+}
+
 export async function registerApi(
   email: string,
   password: string,

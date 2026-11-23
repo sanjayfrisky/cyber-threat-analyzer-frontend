@@ -1,12 +1,13 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { AuthUser } from "@/lib/types";
-import { loginApi, registerApi, getMeApi, logoutApi } from "@/lib/api";
+import { loginApi, loginWithGoogleApi, registerApi, getMeApi, logoutApi } from "@/lib/api";
 
 type AuthContextType = {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  loginWithGoogle: (idToken: string, rememberMe?: boolean) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -38,6 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   };
 
+  const loginWithGoogle = async (idToken: string, rememberMe: boolean = true) => {
+    const res = await loginWithGoogleApi(idToken, rememberMe);
+    setUser(res.user);
+  };
+
   const register = async (email: string, password: string, fullName: string) => {
     const res = await registerApi(email, password, fullName);
     setUser(res.user);
@@ -52,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
