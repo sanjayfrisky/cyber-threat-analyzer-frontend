@@ -33,3 +33,62 @@ export type AuthResponse = {
   token: string;
   message: string;
 };
+
+export type AgentToolMeta = {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+};
+
+export type AgentToolsResponse = {
+  count: number;
+  tools: AgentToolMeta[];
+};
+
+export type AgentHealthResponse = {
+  status: "ok" | "degraded";
+  providers: Record<string, "available" | "not_configured">;
+  tools_registered: number;
+  tool_names: string[];
+};
+
+export type AgentAnalyzeResult = {
+  session_id: string;
+  query: string;
+  intent: string;
+  answer: string;
+  tools_used: string[];
+  tool_details: Record<string, unknown>[];
+  sources: { title?: string; source?: string; url?: string; citation?: string }[];
+  iterations: number;
+  execution_time_ms: number;
+};
+
+export type ChatSession = {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: ChatMessage[];
+  pinned?: boolean;
+};
+
+export type PluginIntegration = {
+  provider: "github" | "gmail" | "google_drive" | "slack";
+  name: string;
+  description: string;
+  icon: string;
+  is_connected: boolean;
+  account_info: Record<string, any>;
+  scopes: string[];
+  available_tools: string[];
+};
+
+export type ToolExecutionResponse = {
+  success: boolean;
+  tool_name: string;
+  result?: any;
+  requires_confirmation?: boolean;
+  confirmation_prompt?: string;
+  error?: string;
+};

@@ -1,5 +1,15 @@
 
-import type { ScreeningResult, AuthUser, AuthResponse } from "@/lib/types";
+import type {
+  ScreeningResult,
+  AuthUser,
+  AuthResponse,
+  AgentHealthResponse,
+  AgentToolsResponse,
+  AgentAnalyzeResult,
+  ChatMessage,
+  PluginIntegration,
+  ToolExecutionResponse,
+} from "@/lib/types";
 
 export const API_BASE = (
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -310,4 +320,149 @@ export async function screenEvidence(input: {
   }
 
   return data as ScreeningResult;
+}
+
+export async function getAgentHealth(): Promise<AgentHealthResponse> {
+  const response = await fetch(apiUrl("/api/agent/health"), {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Agent health check failed (${response.status})`);
+  }
+  return response.json();
+}
+
+export async function getAgentTools(): Promise<AgentToolsResponse> {
+  const response = await fetch(apiUrl("/api/agent/tools"), {
+    method: "POST",
+    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch agent tools (${response.status})`);
+  }
+  return response.json();
+}
+
+export async function analyzeWithAgent(
+  query: string,
+  sessionId: string = "default-session"
+): Promise<AgentAnalyzeResult> {
+  const response = await fetch(apiUrl("/api/agent/analyze"), {
+    method: "POST",
+    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+    credentials: "include",
+    body: JSON.stringify({ query, session_id: sessionId }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || `Agent analysis failed (${response.status})`);
+  }
+  return data as AgentAnalyzeResult;
+}
+
+export async function getChatSessionsApi(): Promise<{
+  sessions: {
+    id: string;
+    title: string;
+    created_at: string | null;
+    updated_at: string | null;
+    message_count: number;
+  }[];
+}> {
+  const response = await fetch(apiUrl("/api/chat/sessions"), {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load sessions (${response.status})`);
+  }
+  return response.json();
+}
+
+export async function getSessionMessagesApi(
+  sessionId: string
+): Promise<{ session_id: string; messages: ChatMessage[] }> {
+  const response = await fetch(apiUrl(`/api/chat/sessions/${encodeURIComponent(sessionId)}`), {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load conversation (${response.status})`);
+  }
+  return response.json();
+}
+
+export async function deleteSessionApi(sessionId: string): Promise<void> {
+  const response = await fetch(apiUrl(`/api/chat/sessions/${encodeURIComponent(sessionId)}`), {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete session (${response.status})`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Centralized OAuth Plugin Integrations (GitHub, Gmail, Google Drive, Slack)
+// ---------------------------------------------------------------------------
+
+export async function getIntegrationsApi(): Promise<PluginIntegration[]> {
+  const response = await fetch(apiUrl("/api/v1/integrations"), {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch integrations (${response.status})`);
+  }
+  return response.json();
+}
+
+export async function connectIntegrationApi(provider: string): Promise<{ authorization_url: string; state: string }> {
+  const response = await fetch(apiUrl(`/api/v1/integrations/${provider}/connect`), {
+    method: "POST",
+    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || `Connect failed for ${provider}`);
+  }
+  return response.json();
+}
+
+export async function disconnectIntegrationApi(provider: string): Promise<void> {
+  const response = await fetch(apiUrl(`/api/v1/integrations/${provider}/disconnect`), {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`Disconnect failed for ${provider}`);
+  }
+}
+
+export async function executePluginToolApi(
+  provider: string,
+  toolName: string,
+  argumentsPayload: Record<string, any>,
+  confirmed: boolean = false
+): Promise<ToolExecutionResponse> {
+  const response = await fetch(apiUrl(`/api/v1/integrations/${provider}/execute`), {
+    method: "POST",
+    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      tool_name: toolName,
+      arguments: argumentsPayload,
+      confirmed,
+    }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || `Tool execution failed for ${toolName}`);
+  }
+  return response.json();
 }
